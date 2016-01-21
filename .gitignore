@@ -12,6 +12,16 @@ src_managed/
 project/boot/
 project/plugins/project/
 
+.DS_Store
+
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+
+# Idea
+*.iml
+.idea/
+*.ipr
+*.iws
+*.iml
+out/
