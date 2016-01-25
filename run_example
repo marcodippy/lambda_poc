@@ -8,26 +8,29 @@ bin/kafka-server-start.sh config/server.properties
 //create events_topic topic
 bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic events_topic
 
+//start flume
+bin/flume-ng agent -n tier1 -c conf -f conf/lambdapoc_flume-conf.properties
+
 //open a console to write messages to the topic
 bin/kafka-console-producer.sh --broker-list localhost:9092 --topic events_topic
 
-{"type":"AAA", "timestamp":"2015-06-10T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-10T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-10T14:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-10T14:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-10T15:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-15T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-15T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-25T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-25T12:54:43.064528"}
-{"type":"AAA", "timestamp":"2015-06-25T12:54:53.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-10T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-10T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-10T14:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-10T14:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-10T15:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-15T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-15T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-25T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-25T12:54:43.064528"}
-{"type":"ZZZ", "timestamp":"2015-06-25T12:54:53.064528"}
+{"type":"AAA", "timestamp":"2015-06-10 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-10 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-10 14:54:43"}
+{"type":"AAA", "timestamp":"2015-06-10 14:54:43"}
+{"type":"AAA", "timestamp":"2015-06-10 15:54:43"}
+{"type":"AAA", "timestamp":"2015-06-15 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-15 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-25 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-25 12:54:43"}
+{"type":"AAA", "timestamp":"2015-06-25 12:54:53"}
+{"type":"ZZZ", "timestamp":"2015-06-10 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-10 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-10 14:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-10 14:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-10 15:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-15 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-15 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-25 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-25 12:54:43"}
+{"type":"ZZZ", "timestamp":"2015-06-25 12:54:53"}

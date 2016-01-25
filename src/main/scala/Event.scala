@@ -1,13 +1,12 @@
-import java.text.SimpleDateFormat
-import java.util.Date
-
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 object Event {
-  private val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+  private val format = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
-  def convertStringToDate(dateString: String): Date = format.parse(dateString)
+  def convertStringToDate(dateString: String): DateTime = format.parseDateTime(dateString)
 
   def fromJson(jsonEvent: String): Event = {
     implicit val formats = DefaultFormats
@@ -18,5 +17,12 @@ object Event {
 }
 
 case class Event(timestamp: String, `type`: String) {
-  val buckets = BucketList(Event.convertStringToDate(timestamp))
+  val date = Event.convertStringToDate(timestamp)
+  val buckets = BucketList(date)
+
+  val year = date.getYear
+  val month = date.monthOfYear().get()
+  val day = date.dayOfMonth.get()
+  val hour = date.hourOfDay.get()
+  val minute = date.minuteOfHour.get()
 }
