@@ -1,6 +1,3 @@
-import java.util.{Calendar, Date}
-
-import org.apache.commons.lang3.time.DateUtils
 import org.joda.time.DateTime
 
 case class Bucket(bucket: String, date: DateTime)
