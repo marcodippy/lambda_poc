@@ -10,7 +10,6 @@ object RestEndpoint extends App with SimpleRoutingApp {
 
   val cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
 
-
   startServer(interface = "localhost", port = 8080) {
     path("lambda" / "form") {
       get {
@@ -18,9 +17,9 @@ object RestEndpoint extends App with SimpleRoutingApp {
           <html>
             <h1>Say hello to spray</h1>
             <form action="./query" method="GET">
-              <input type="datetime-local" name="from" />
-              <input type="datetime-local" name="to" />
-              <input type="submit" value="pd" />
+              <input type="datetime-local" name="from"/>
+              <input type="datetime-local" name="to"/>
+              <input type="submit" value="pd"/>
             </form>
           </html>
         }
@@ -28,9 +27,8 @@ object RestEndpoint extends App with SimpleRoutingApp {
     } ~
       path("lambda" / "query") {
         get {
-          parameters('from, 'to){ (from, to) =>
+          parameters('from, 'to) { (from, to) =>
             complete {
-
 
               println(from)
               println(to)

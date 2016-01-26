@@ -2,16 +2,15 @@ package serving_layer
 
 import java.sql.Timestamp
 
-import com.datastax.driver.core.{Cluster, Row}
-import org.joda.time.DateTime
+import com.datastax.driver.core.Cluster
 
 import scala.collection.JavaConversions._
 
-object QueryExample extends App {
+object Queries {
   val cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
   val session = cluster.connect("lambda_poc");
 
-  def getEventsFromDb(event: String, bucket: String, range: Range): List[EventRow] = {
+  private def getEventsFromDb(event: String, bucket: String, range: Range): List[EventRow] = {
     println(s" QRY => $bucket - $range")
 
     val prepared = session.prepare("SELECT * FROM events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate");
@@ -22,7 +21,7 @@ object QueryExample extends App {
     ret
   }
 
-  def getEventsInRanges(event: String, bucket: String, rangeLeft: Range, rangeRight: Range): List[EventRow] = {
+  private def getEventsInRanges(event: String, bucket: String, rangeLeft: Range, rangeRight: Range): List[EventRow] = {
     if (rangeLeft equals rangeRight) {
       getEventsFromDb(event, bucket, rangeLeft)
     }
@@ -37,7 +36,7 @@ object QueryExample extends App {
     }
   }
 
-  def getEvents(event: String, range: Range, bl: List[String]) = {
+  def getEvents(event: String, range: Range): List[EventRow] = {
 
     def go(event: String, rangeLeft: Range, rangeRight: Range, blist: List[String], results: List[EventRow]): List[EventRow] = {
       println(s"\n**** $rangeLeft   -   $rangeRight ****")
@@ -75,11 +74,7 @@ object QueryExample extends App {
       }
     }
 
-    go(event, range, range, bl, List.empty[EventRow])
+    go(event, range, range, Bucket.bucketList, List.empty[EventRow])
   }
 
-
-  println(getEvents("LOGIN_MOBILE", Range(new DateTime(2014, 1, 1, 13, 12, 0), new DateTime(2014, 2, 1, 15, 22, 0)), Bucket.bucketList).map(_.count).sum)
-
-  System.exit(0)
 }
