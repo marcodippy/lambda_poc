@@ -14,7 +14,7 @@ object QueryExample extends App {
   def getEvents(event: String, bucket: String, range: Range): List[EventRow] = {
     def toSqlTimestamp(datetime: DateTime) = new Timestamp(datetime.getMillis)
 
-    val prepared = session.prepare("SELECT * FROM batch_events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate");
+    val prepared = session.prepare("SELECT * FROM events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate");
     val results = session.execute(prepared.bind(event, bucket, toSqlTimestamp(range.left), toSqlTimestamp(range.right)))
     results.iterator().toList.map(EventRow.fromRow(_)).filter(e => e.bucket.end.isBefore(to.getMillis))
   }
@@ -70,12 +70,12 @@ object QueryExample extends App {
   }
 
 
-  val from = new DateTime(2012, 1, 13, 0, 0, 0)
-  val to = new DateTime(2016, 4, 27, 18, 0, 0)
+  val from = new DateTime(2011, 1, 13, 0, 0, 0)
+  val to = new DateTime(2017, 4, 27, 18, 0, 0)
   val bucketList = List("Y", "M", "D", "H")
 
-  val events = gete("AAA", Range(from, to), bucketList)
-  events.map(_.count).sum
+  val events = gete("LOGIN_MOBILE", Range(from, to), bucketList)
+  println(events.map(_.count).sum)
 
   System.exit(0)
 }
