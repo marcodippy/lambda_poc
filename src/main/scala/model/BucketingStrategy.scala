@@ -1,3 +1,5 @@
+package model
+
 import org.joda.time.DateTime
 
 case class Bucket(bucket: String, date: DateTime)

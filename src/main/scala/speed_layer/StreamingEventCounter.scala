@@ -1,6 +1,9 @@
+package speed_layer
+
 import com.datastax.driver.core.Cluster
 import com.datastax.spark.connector.cql.CassandraConnector
 import kafka.serializer.StringDecoder
+import model.Event
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.cassandra.CassandraSQLContext
@@ -49,6 +52,8 @@ object StreamingEventCounter extends App {
       val countsByEventType = events.groupBy(identity).mapValues(_.size)
       (bucket, countsByEventType)
     }
+
+  //use batch updates!
 
   bucketedEventCounts.foreachRDD { rdd =>
     rdd.foreach { case (bucket, aggregates) =>

@@ -1,4 +1,7 @@
+package batch_layer
+
 import com.databricks.spark.avro._
+import model.Event
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.log4j.{Level, Logger}

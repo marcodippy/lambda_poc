@@ -1,12 +1,12 @@
 package batch_layer
 
 import org.apache.spark.sql.functions._
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 
 object DateUtils {
 
   def toSqlTimestamp(year: Int, month: Int, day: Int, hour: Int): java.sql.Timestamp =
-    new java.sql.Timestamp(new DateTime(year, month, day, hour, 0).getMillis)
+    new java.sql.Timestamp(new DateTime(year, month, day, hour, 0, 0, DateTimeZone.getDefault).getMillis)
 
   val bdate_h = udf(
     (year: Int, month: Int, day: Int, hour: Int) => toSqlTimestamp(year, month, day, hour)

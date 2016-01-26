@@ -52,6 +52,13 @@ object BatchEventCounter extends App {
     session.execute(prepared.bind(count, event, bucket, bdate))
   }
 
+  //Use partitioning to control the parallelism for writing to your data storage. Your data storage may not support too many concurrent connections.
+  //use batch!
+  //consider a static pool of db connection on each spark worker
+  //  If you are writing to a sharded data storage, partition your RDD to match your sharding strategy.
+  //  That way each of your Spark workers only connects to one database shard, rather than each Spark worker connecting to every database shard.
+
+
   eventsPerHour.foreachPartition(_.foreach(row =>
     connector.withSessionDo { session => saveToCassandra(session, row, 5, 0, 6, "H") }
   ))
