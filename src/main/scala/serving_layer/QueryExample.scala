@@ -79,7 +79,7 @@ object QueryExample extends App {
   }
 
 
-  println(getEvents("LOGIN_MOBILE", Range(new DateTime(2014, 1, 1, 13, 12, 0), new DateTime(2014, 2, 1, 15, 22, 0)), Bucket.bucketList).map(_.count).sum)
+  println(getEvents("LOGIN_MOBILE", Range(new DateTime(2014, 1, 1, 13, 12, 0), new DateTime(2015, 1, 1, 0, 0, 0)), Bucket.bucketList).map(_.count).sum)
 
   System.exit(0)
 }

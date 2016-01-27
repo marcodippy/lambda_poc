@@ -1,12 +1,13 @@
 package batch_layer
 
 import com.databricks.spark.avro._
-import model.Event
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SQLContext, SaveMode}
 import org.apache.spark.{SparkConf, SparkContext}
+import org.joda.time.DateTime
 
 object DataPartitioner extends App {
   Logger.getRootLogger.setLevel(Level.WARN)
@@ -14,6 +15,7 @@ object DataPartitioner extends App {
   val conf = new SparkConf().setAppName("DataPartitioner").setMaster("local[*]")
   val sc = new SparkContext(conf)
   val sqlContext = new SQLContext(sc)
+  sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
   import sqlContext.implicits._
 
@@ -24,41 +26,35 @@ object DataPartitioner extends App {
   val newdata_dir = new org.apache.hadoop.fs.Path("/new_data/kafka/events_topic")
   val exists = fs.exists(newdata_dir)
   println(exists)
-
   val files = fs.listFiles(newdata_dir, true)
+
+  val startTime = new DateTime()
 
   while (files.hasNext) {
     val next = files.next()
 
     if (next.isFile) {
       val filePath = next.getPath
-      val lines = sc.textFile(filePath.toString)
 
-      val events = lines.map(line => EventRow.fromEvent(Event.fromJson(line)))
+      //.tmp files are currently used by Flume
+      if (!filePath.toString.endsWith(".tmp")) {
+        println(s"Processing file ${filePath.toString}")
 
-      val df = events.toDF()
+        val json = sqlContext.read.json(filePath.toString)
+          .withColumn("year", year(col("timestamp")))
+          .withColumn("month", month(col("timestamp")))
+          .withColumn("day", dayofmonth(col("timestamp")))
+          .withColumn("hour", hour(col("timestamp")))
+          .withColumn("minute", minute(col("timestamp")))
 
-      df.show()
-      df.write.mode(SaveMode.Append).partitionBy("type", "year", "month", "day", "hour").avro("/tmp/output")
-      //      fs.delete(filePath, false)
+        json.write.mode(SaveMode.Append).partitionBy("year", "month", "day").avro("hdfs://localhost:9000/tmp/output")
+        //fs.delete(filePath, false)
+      }
     }
   }
 
   sc.stop()
+
+  val endTime = new DateTime()
+  println(s"Partitioning completed in ${endTime.getMillis - startTime.getMillis}ms")
 }
-
-object EventRow {
-  def fromEvent(event: Event): EventRow = {
-    EventRow(
-      event.year.toString,
-      event.month.toString,
-      event.day.toString,
-      event.hour.toString,
-      event.minute.toString,
-      event.`type`,
-      event.timestamp)
-  }
-}
-
-case class EventRow(year: String, month: String, day: String, hour: String, minute: String, `type`: String, timestamp: String)
-

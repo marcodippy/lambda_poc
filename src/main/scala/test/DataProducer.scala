@@ -48,18 +48,20 @@ object DataProducer extends App {
   val messages = range.map(d => (randomElem(eventTypes, new Random()), d.toString("yyyy-MM-dd HH:mm:ss")))
     .map(x => s"""{"type":"${x._1}", "timestamp":"${x._2}"}""")
 
+  var count = 0;
+
   messages.foreach(msg => {
+    count += 1
     producer.send(new KeyedMessage[String, String]("events_topic", msg));
   })
 
-  println(messages.length)
+  println(count)
 
   producer.close();
 
   val endTime = new DateTime()
 
-  val loadingTime = new Duration(endTime, startTime)
-  println(s"Completed in ${loadingTime.getMillis} ms")
+  println(s"Completed in ${(endTime.getMillis - startTime.getMillis)} ms")
 
   System.exit(0)
 }

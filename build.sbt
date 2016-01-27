@@ -15,5 +15,6 @@ libraryDependencies ++= Seq(
   "com.databricks" %% "spark-avro" % "2.0.1",
   "io.spray"            %%  "spray-can"     % sprayV,
   "io.spray"            %%  "spray-routing" % sprayV,
+  "io.spray"            %%  "spray-json" % sprayV,
   "com.datastax.cassandra" % "cassandra-driver-core" % "3.0.0-rc1"
 )
