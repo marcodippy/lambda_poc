@@ -5,6 +5,7 @@ import java.sql.Timestamp
 import com.datastax.driver.core.{Cluster, Row}
 import org.joda.time.DateTime
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 
 object QueryExample extends App {
@@ -39,6 +40,7 @@ object QueryExample extends App {
 
   def getEvents(event: String, range: Range, bl: List[String]) = {
 
+    @tailrec
     def go(event: String, rangeLeft: Range, rangeRight: Range, blist: List[String], results: List[EventRow]): List[EventRow] = {
       println(s"\n**** $rangeLeft   -   $rangeRight ****")
 
