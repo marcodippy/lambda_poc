@@ -59,6 +59,9 @@ object BatchEventCounter extends App {
   sc.stop()
   val endTime = new DateTime()
   println(s"Processing finished in ${endTime.getMillis - startTime.getMillis} ms")
+
+  //add realtime views expiration mechanism here (maybe)
+
   System.exit(0)
 
 

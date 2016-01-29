@@ -18,8 +18,6 @@ object MJsonImplicits extends DefaultJsonProtocol {
 object RestEndpoint extends App with SimpleRoutingApp with SprayJsonSupport {
   implicit val system = ActorSystem("spray-actor")
 
-  val cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
-
   startServer(interface = "localhost", port = 9999) {
     import MJsonImplicits._
 

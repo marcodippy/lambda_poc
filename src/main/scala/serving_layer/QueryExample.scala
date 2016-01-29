@@ -14,7 +14,7 @@ object QueryExample extends App {
   def getEventsFromDb(event: String, bucket: String, range: Range): List[EventRow] = {
     println(s" QRY => $bucket - $range")
 
-    val prepared = session.prepare("SELECT * FROM events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate");
+    val prepared = session.prepare("SELECT * FROM events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate"); //move
     val results = session.execute(prepared.bind(event, bucket, new Timestamp(range.left.getMillis), new Timestamp(range.right.getMillis)))
     val ret = results.iterator().toList.map(EventRow.fromRow(_)).filter(e => ((e.bucket.end.isBefore(range.right)) || (e.bucket.end.isEqual(range.right))))
 
@@ -79,7 +79,7 @@ object QueryExample extends App {
   }
 
 
-  println(getEvents("LOGIN_MOBILE", Range(new DateTime(2014, 1, 1, 13, 12, 0), new DateTime(2015, 1, 1, 0, 0, 0)), Bucket.bucketList).map(_.count).sum)
+  println(getEvents("LOGIN", Range(new DateTime(2015, 12, 25, 15, 0, 0), new DateTime(2015, 12, 25, 18, 30, 0)), Bucket.bucketList).map(_.count).sum)
 
   System.exit(0)
 }

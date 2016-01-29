@@ -53,7 +53,7 @@ object StreamingEventCounter extends App {
       (bucket, countsByEventType)
     }
 
-  //use batch updates!
+  //TODO use batch updates!
 
   bucketedEventCounts.foreachRDD { rdd =>
     rdd.foreach { case (bucket, aggregates) =>
