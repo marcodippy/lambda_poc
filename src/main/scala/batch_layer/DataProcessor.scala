@@ -22,6 +22,7 @@ object DataProcessor {
 
     val sc = new SparkContext(conf)
     val sqlContext = new SQLContext(sc)
+    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
     prepareDatabase(sc)
 
@@ -30,8 +31,6 @@ object DataProcessor {
     sc.stop()
     val endTime = new DateTime()
     println(s"Processing finished in ${endTime.getMillis - startTime.getMillis} ms")
-
-
   }
 
   def processData(sqlContext: SQLContext, inputDir: String) = {

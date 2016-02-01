@@ -70,7 +70,6 @@ object StreamingEventCounter2 {
           saveToCassandra(df, "D", bdate_d(year(col("timestamp")), month(col("timestamp")), dayofmonth(col("timestamp"))))
           saveToCassandra(df, "M", bdate_m(year(col("timestamp")), month(col("timestamp"))))
           saveToCassandra(df, "Y", bdate_y(year(col("timestamp"))))
-
         */
       }
     })

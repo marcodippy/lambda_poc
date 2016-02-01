@@ -6,7 +6,8 @@ import com.datastax.driver.core.Cluster
 import org.joda.time.DateTime
 import scala.collection.JavaConversions._
 
-object EventCount extends App {
+//TODO refactoring!
+object EventCount {
   val cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
   val session = cluster.connect("lambda_poc");
   val RT_EVENTS_PREPARED_STATEMENT = session.prepare("SELECT * FROM events where event = ? and bucket = ? and bdate >= ? and bdate < ? ORDER BY bdate");
@@ -83,9 +84,9 @@ object EventCount extends App {
     go(event, range, range, bl, List.empty[EventRow])
   }
 
-  def countEvents(event: String, range: Range): Long = {
-    def sortByBucketDate(e1: EventRow, e2: EventRow): Boolean = e1.bucket.date.isBefore(e2.bucket.date)
+  private def sortByBucketDate(e1: EventRow, e2: EventRow): Boolean = e1.bucket.date.isBefore(e2.bucket.date)
 
+  def countEventsByRange(event: String, range: Range): Long = {
     println("RETRIEVING REALTIME DATA")
     val realTimeEvents = getEvents(event, range, Bucket.bucketList, "realtime").sortWith(sortByBucketDate)
     println(s"****** realtime count ${realTimeEvents.map(_.count).sum}")
@@ -103,6 +104,22 @@ object EventCount extends App {
     batchEvents union realTimeEvents map (_.count) sum
   }
 
-  println(countEvents("LOGIN", Range(new DateTime(2015, 12, 25, 15, 0, 0), new DateTime(2015, 12, 25, 18, 30, 0))))
-  System.exit(0)
+  def getEventCountByRangeAndBucket(event: String, range: Range, bucket: String) : Seq[EventRow]= {
+    val realTimeEvents = getEvents(event, range, List(bucket), "realtime").sortWith(sortByBucketDate)
+
+    val nrange = realTimeEvents match {
+      case x :: _ => Range(range.left, x.bucket.date)
+      case _ => range
+    }
+
+    val batchEvents = getEvents(event, nrange, List(bucket), "batch").sortWith(sortByBucketDate)
+    batchEvents union realTimeEvents
+  }
+
+
+  def main(args: Array[String]) {
+    println(countEventsByRange("LOGIN_MOBILE", Range(new DateTime(2015, 12, 25, 15, 0, 0), new DateTime(2015, 12, 25, 18, 30, 0))))
+    System.exit(0)
+  }
+
 }

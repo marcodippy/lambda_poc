@@ -13,6 +13,7 @@ object DataPreProcessing {
 
     val sc = new SparkContext(new SparkConf().setAppName("DataPreProcessing").setMaster("local[*]"))
     val sqlContext = new SQLContext(sc)
+    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
     preProcessData(sqlContext, "hdfs://localhost:9000", "/new_data/kafka/events_topic", "hdfs://localhost:9000/tmp/output")
 

@@ -8,6 +8,13 @@ import org.json4s.jackson.JsonMethods._
 object Event {
   private val format = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
+  val EVENT_TYPES = Seq(
+    "LOGIN_WEB", "LOGIN_MOBILE", "BANK_TRANSFER",
+    "PAY_BILL", "REQUEST_CREDIT_CARD", "VIEW_STATEMENT",
+    "REQUEST_MORTGAGE", "PAY_CREDIT_CARD", "CREATE_ACCOUNT",
+    "ENABLE_APPLE_PAY", "REQUEST_SMS", "REQUEST_PAPER_STATEMENT"
+  )
+
   def convertStringToDate(dateString: String): DateTime = format.parseDateTime(dateString)
 
   def fromJson(jsonEvent: String): Event = {

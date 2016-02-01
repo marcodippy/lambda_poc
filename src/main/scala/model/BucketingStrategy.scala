@@ -25,6 +25,8 @@ object Year {
 }
 
 object BucketList {
+  val bucketSymbols = List("m", "H", "D", "M", "Y")
+
   def apply(date: DateTime): List[Bucket] = List(
     Minute(date),
     Hour(date),

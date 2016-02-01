@@ -3,6 +3,10 @@ package batch_layer
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
+import org.joda.time.DateTime
+
+import scala.collection.immutable.Queue
+import scala.collection.mutable
 
 object BatchPipeline {
   val HDFS_URL = "hdfs://localhost:9000"
@@ -20,11 +24,16 @@ object BatchPipeline {
 
     prepareEnvForTest(sc, HDFS_URL, OUTPUT_DIR)
 
-    DataPreProcessing.preProcessData(sqlContext, HDFS_URL, NEW_DATA_DIR, OUTPUT_DIR, false)
+    var jobQueue = Queue.empty[DateTime]
 
-    DataProcessor.processData(sqlContext, OUTPUT_DIR)
+    while (true) {
+      val startTime = new DateTime()
 
-    //add realtime views expiration mechanism here (maybe)
+      DataPreProcessing.preProcessData(sqlContext, HDFS_URL, NEW_DATA_DIR, OUTPUT_DIR, false)
+      DataProcessor.processData(sqlContext, OUTPUT_DIR)
+
+      jobQueue = expireRealTimeViews(startTime, jobQueue)
+    }
 
     System.exit(0)
   }
@@ -41,5 +50,19 @@ object BatchPipeline {
   def prepareEnvForTest(sc: SparkContext, hdfsUrl: String, outputDir: String) {
     HdfsUtils.deleteFile(HdfsUtils.getFileSystem(hdfsUrl), outputDir, true)
     DataProcessor.prepareDatabase(sc)
+  }
+
+  //basic/stupid mechanism to make real time views expiring
+  def expireRealTimeViews(jobStartTime: DateTime, jobStartQueue: Queue[DateTime]) : Queue[DateTime] = {
+    val queue = jobStartQueue.enqueue(jobStartTime)
+
+    if (jobStartQueue.size >= 3) {
+      val (date, new_queue) = queue.dequeue
+      serving_layer.RealTimeViewsCleaner.expireData(date)
+      new_queue
+    }
+    else {
+      queue
+    }
   }
 }
