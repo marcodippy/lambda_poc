@@ -104,7 +104,8 @@ object EventCount {
     batchEvents union realTimeEvents map (_.count) sum
   }
 
-  def getEventCountByRangeAndBucket(event: String, range: Range, bucket: String) : Seq[EventRow]= {
+  def getEventCountByRangeAndBucket(event: String, range: Range, bucket: String): Seq[EventRow] = {
+    println("RETRIEVING REALTIME DATA")
     val realTimeEvents = getEvents(event, range, List(bucket), "realtime").sortWith(sortByBucketDate)
 
     val nrange = realTimeEvents match {
@@ -112,10 +113,31 @@ object EventCount {
       case _ => range
     }
 
+    println("RETRIEVING BATCH DATA\n\n")
     val batchEvents = getEvents(event, nrange, List(bucket), "batch").sortWith(sortByBucketDate)
     batchEvents union realTimeEvents
   }
 
+  def getEventsByRange(event: String, range: Range) : Seq[EventRow] = {
+    println("RETRIEVING REALTIME DATA")
+    val realTimeEvents = getEvents(event, range, Bucket.bucketList, "realtime").sortWith(sortByBucketDate)
+
+    val nrange = realTimeEvents match {
+      case x :: _ => Range(range.left, x.bucket.date)
+      case _ => range
+    }
+
+    println("RETRIEVING BATCH DATA\n\n")
+    val batchEvents = getEvents(event, nrange, Bucket.bucketList, "batch").sortWith(sortByBucketDate)
+    batchEvents union realTimeEvents
+  }
+
+
+  def getTotalEventsCount(range: Range): Seq[EventRow] = {
+    model.Event.EVENT_TYPES.flatMap(eventType => {
+      getEventsByRange(eventType, range)
+    })
+  }
 
   def main(args: Array[String]) {
     println(countEventsByRange("LOGIN_MOBILE", Range(new DateTime(2015, 12, 25, 15, 0, 0), new DateTime(2015, 12, 25, 18, 30, 0))))
