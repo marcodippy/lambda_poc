@@ -29,7 +29,11 @@ object DataProducer {
     new Period(0, 1, 15, 0)
   )
 
-  val TEST_DATA : (Seq[String], Seq[Period]) =  (Seq("LOGIN"), Seq(new Period(0, 1, 0, 0)))
+  /*
+    This generates 1 single event type per minute
+    val TEST_DATA : (Seq[String], Seq[Period]) =  (Seq("LOGIN_WEB"), Seq(new Period(0, 1, 0, 0)))
+   */
+  val TEST_DATA: (Seq[String], Seq[Period]) = (EVENT_TYPES, TIME_STEPS)
 
   def main(args: Array[String]) {
     val startTime = new DateTime()
@@ -41,7 +45,7 @@ object DataProducer {
 
     messages.foreach(msg => {
       msgCount += 1
-      if (msgCount%10000 == 0){
+      if (msgCount % 10000 == 0) {
         println(s"Messages sent -> $msgCount")
       }
       producer.send(new KeyedMessage[String, String]("events_topic", msg));

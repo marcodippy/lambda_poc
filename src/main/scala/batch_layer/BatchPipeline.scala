@@ -23,12 +23,14 @@ object BatchPipeline {
     val sqlContext = new SQLContext(sc)
 
     prepareEnvForTest(sc, HDFS_URL, OUTPUT_DIR)
-    val EXPIRE_REALTIME_VIEWS = false;
 
+    val EXPIRE_REALTIME_VIEWS = false;
+    val NUM_ITERATIONS = 1;
 
     var jobQueue = Queue.empty[DateTime]
 
-    while (true) {
+    var i = 0
+    while (i < NUM_ITERATIONS) {
       val startTime = new DateTime()
 
       DataPreProcessing.preProcessData(sqlContext, HDFS_URL, NEW_DATA_DIR, OUTPUT_DIR, false)
@@ -36,6 +38,8 @@ object BatchPipeline {
 
       if (EXPIRE_REALTIME_VIEWS)
         jobQueue = expireRealTimeViews(startTime, jobQueue)
+
+      i = i+1
     }
 
     System.exit(0)

@@ -19,20 +19,35 @@
         function getChartsData(data){
             var dt = [];
             for (var i in data) {
-                dt.push({label: data[i].date, value: data[i].count})
+                dt.push({label: data[i][0], value: data[i][1]})
             }
-            var chartData = [{key:"MyChart", values: dt}]
-            return chartData
+            return dt
         }
 
         $(document).ready(function(){
              $('#submit').on('click', function() {
                     $.ajax({
-                      url: 'http://localhost:9999/lambda/countbyperiod',
-                      data: 'from=' + $('#from').val() + '&to=' + $('#to').val() + '&event=' + $('#event').val()
+                      url: 'http://localhost:9999/lambda/compare_events',
+                      data: 'from=' + $('#from').val() + '&to=' + $('#to').val() + '&events=' + $('#events').val()
                     })
                     .done(function(data) {
-                        $('#results').text('There are ' + JSON.stringify(data[3]) + ' ' +$('#event').val()+ ' events in the specified period')
+                        var chartData = getChartsData(data)
+
+                         nv.addGraph(function() {
+                            var chart = nv.models.pieChart()
+                                                    .x(function(d) { return d.label })
+                                                    .y(function(d) { return d.value })
+                                                    .showLabels(true);
+
+                            d3.select("#chart svg")
+                                .datum(chartData)
+                                .transition().duration(1200)
+                                .call(chart);
+
+                          return chart;
+                        });
+
+
                     })
                     .fail(function() {
                       alert("Ajax failed to fetch data")
@@ -43,14 +58,16 @@
     </script>
 </head>
     <body>
-        <h1>Event count</h1>
+        <h1>Compare Events</h1>
         <form action="">
-            Event: <input type="text" name="event" id="event" value="LOGIN_WEB"/>
+            Event: <input type="text" name="events" id="events" value="LOGIN_WEB,LOGIN_MOBILE" style="width: 400px"/><br/>
             From: <input type="datetime-local" id="from" name="from" value="2015-12-25T11:00"/>
             To: <input type="datetime-local" id="to" name="to" value="2015-12-25T22:00"/>
                 <input type="button" id="submit" value="go"/>
         </form>
         <br/><br/><br/>
-        <p id="results"/>
+        <div id="chart">
+            <svg></svg>
+        </div>
     </body>
 </html>

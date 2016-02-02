@@ -19,6 +19,9 @@ object DataProcessor {
     val conf = new SparkConf().setAppName("BatchEventCounter").setMaster("local[*]")
       .set("spark.cassandra.connection.host", "127.0.0.1")
       .set("spark.sql.shuffle.partitions", "1")
+      .set("spark.cassandra.output.concurrent.writes", "10")
+        .set("spark.cassandra.output.batch.size.rows", "5120") //tune this value
+//        .set("spark.cassandra.output.batch.size.bytes", "262144") //tune this value
 
     val sc = new SparkContext(conf)
     val sqlContext = new SQLContext(sc)
@@ -26,15 +29,18 @@ object DataProcessor {
 
     prepareDatabase(sc)
 
-    processData(sqlContext, "hdfs://localhost:9000/tmp/output")
+    processData(sqlContext, "hdfs://localhost:9000/events")
 
     sc.stop()
     val endTime = new DateTime()
     println(s"Processing finished in ${endTime.getMillis - startTime.getMillis} ms")
+    System.exit(0)
   }
 
   def processData(sqlContext: SQLContext, inputDir: String) = {
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
+
+    //may be a good idea to reduce the number of partitions (coalesce(numPartitions)). Investigate this
     val df = sqlContext.read.avro(inputDir).cache()
 
     println("Aggregating by minute...")
