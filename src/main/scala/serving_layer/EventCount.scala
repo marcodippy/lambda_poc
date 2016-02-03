@@ -5,6 +5,7 @@ import java.sql.Timestamp
 import com.datastax.driver.core.Cluster
 import org.joda.time.DateTime
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 
 //TODO refactoring!
@@ -43,6 +44,7 @@ object EventCount {
 
   private def getEvents(event: String, range: Range, bl: List[String], table: String) = {
 
+    @tailrec
     def go(event: String, rangeLeft: Range, rangeRight: Range, blist: List[String], results: List[EventRow]): List[EventRow] = {
       if ((rangeLeft.right equals rangeLeft.right) && (rangeRight.right equals rangeRight.right)) {
         results
