@@ -6,7 +6,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.joda.time.DateTime
 
 import scala.collection.immutable.Queue
-import scala.collection.mutable
 
 object BatchPipeline {
   val HDFS_URL = "hdfs://localhost:9000"
@@ -22,7 +21,7 @@ object BatchPipeline {
     val sc = new SparkContext(getSparkConf())
     val sqlContext = new SQLContext(sc)
 
-    prepareEnvForTest(sc, HDFS_URL, OUTPUT_DIR)
+    prepareEnvForTest(CASSANDRA_HOST, HDFS_URL, OUTPUT_DIR)
 
     val EXPIRE_REALTIME_VIEWS = false;
     val NUM_ITERATIONS = 1;
@@ -53,10 +52,9 @@ object BatchPipeline {
   //    .set("spark.cassandra.output.batch.size.bytes", "4096") //tune this value
   //    .set("spark.cassandra.output.concurrent.writes", "5") //tune this value
 
-
-  def prepareEnvForTest(sc: SparkContext, hdfsUrl: String, outputDir: String) {
+  def prepareEnvForTest(cassandraHost: String, hdfsUrl: String, outputDir: String) {
     HdfsUtils.deleteFile(HdfsUtils.getFileSystem(hdfsUrl), outputDir, true)
-    DataProcessor.prepareDatabase(sc)
+    test.PrepareDatabase.prepareBatchDatabase(cassandraHost)
   }
 
   //basic/stupid mechanism to make real time views expiring
@@ -65,7 +63,7 @@ object BatchPipeline {
 
     if (jobStartQueue.size >= 3) {
       val (date, new_queue) = queue.dequeue
-      serving_layer.RealTimeViewsCleaner.expireData(date)
+//      serving_layer.RealTimeViewsCleaner.expireData(date)
       new_queue
     }
     else {

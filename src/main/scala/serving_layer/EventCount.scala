@@ -4,6 +4,7 @@ import java.sql.Timestamp
 
 import com.datastax.driver.core.Cluster
 import org.joda.time.DateTime
+
 import scala.collection.JavaConversions._
 
 //TODO refactoring!
@@ -119,7 +120,7 @@ object EventCount {
 
 
   def getTotalEventsCount(range: Range): Seq[EventRow] = {
-    model.Event.EVENT_TYPES.flatMap(eventType => {
+    Events.EVENT_TYPES.flatMap(eventType => {
       getEventsByRange(eventType, range)
     })
   }

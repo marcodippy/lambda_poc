@@ -1,14 +1,18 @@
 package batch_layer
 
-import batch_layer.DateUtils._
+import java.util.Date
+
+import _root_.test.PrepareDatabase
 import com.databricks.spark.avro._
-import com.datastax.driver.core.Cluster
+import com.datastax.driver.core.BatchStatement
+import com.datastax.spark.connector.cql.CassandraConnector
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql._
-import org.apache.spark.sql.cassandra.CassandraSQLContext
 import org.apache.spark.sql.functions._
 import org.apache.spark.{SparkConf, SparkContext}
 import org.joda.time.DateTime
+import utils.DataFrameUtils._
 
 object DataProcessor {
 
@@ -19,29 +23,29 @@ object DataProcessor {
     val conf = new SparkConf().setAppName("BatchEventCounter").setMaster("local[*]")
       .set("spark.cassandra.connection.host", "127.0.0.1")
       .set("spark.sql.shuffle.partitions", "1")
-      .set("spark.cassandra.output.concurrent.writes", "10")
-        .set("spark.cassandra.output.batch.size.rows", "5120") //tune this value
-//        .set("spark.cassandra.output.batch.size.bytes", "262144") //tune this value
 
     val sc = new SparkContext(conf)
     val sqlContext = new SQLContext(sc)
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-    prepareDatabase(sc)
+    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
 
     processData(sqlContext, "hdfs://localhost:9000/events")
 
     sc.stop()
     val endTime = new DateTime()
-    println(s"Processing finished in ${endTime.getMillis - startTime.getMillis} ms")
+    println(s"Processing completed in ${endTime.getMillis - startTime.getMillis} ms")
     System.exit(0)
   }
 
   def processData(sqlContext: SQLContext, inputDir: String) = {
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-    //may be a good idea to reduce the number of partitions (coalesce(numPartitions)). Investigate this
-    val df = sqlContext.read.avro(inputDir).cache()
+    //maybe it's a good idea to reduce the number of partitions (coalesce(numPartitions)). Investigate this
+    val df = sqlContext.read.avro(inputDir).coalesce(4).cache()
+
+    println("Retrieving distinct event types...")
+    val EVENT_TYPES = sqlContext.sparkContext.broadcast[Seq[String]](df.select("event").distinct().collect().map(row => row.getAs[String]("event")))
 
     println("Aggregating by minute...")
     val eventsPerMinute = df.groupBy("event", "year", "month", "day", "hour", "minute").count().cache()
@@ -58,34 +62,45 @@ object DataProcessor {
     println("Aggregating by year...")
     val eventsPerYear = eventsPerMonth.groupBy("event", "year").agg(sum("count") as "count")
 
-    saveToCassandra(eventsPerMinute, "m", bdate_min(col("year"), col("month"), col("day"), col("hour"), col("minute")))
-    saveToCassandra(eventsPerHour, "H", bdate_h(col("year"), col("month"), col("day"), col("hour")))
-    saveToCassandra(eventsPerDay, "D", bdate_d(col("year"), col("month"), col("day")))
-    saveToCassandra(eventsPerMonth, "M", bdate_m(col("year"), col("month")))
-    saveToCassandra(eventsPerYear, "Y", bdate_y(col("year")))
+    saveToCassandra(eventsPerMinute.withBDateColumn("m"), "m", EVENT_TYPES)
+    saveToCassandra(eventsPerHour.withBDateColumn("H"), "H", EVENT_TYPES)
+    saveToCassandra(eventsPerDay.withBDateColumn("D"), "D", EVENT_TYPES)
+    saveToCassandra(eventsPerMonth.withBDateColumn("M"), "M", EVENT_TYPES)
+    saveToCassandra(eventsPerYear.withBDateColumn("Y"), "Y", EVENT_TYPES)
   }
 
-  def prepareDatabase(sc: SparkContext) = {
-    val cc = new CassandraSQLContext(sc)
-    cc.setKeyspace("lambda_poc")
-
-    val cluster = Cluster.builder().addContactPoint("127.0.0.1").build()
-    val session = cluster.connect()
-    session.execute("CREATE KEYSPACE IF NOT EXISTS lambda_poc WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };")
-    session.execute("CREATE TABLE IF NOT EXISTS lambda_poc.batch_events (event text, bucket text, bdate timestamp, count bigint, PRIMARY KEY ((event, bucket), bdate) );")
-    session.execute("TRUNCATE lambda_poc.batch_events;")
-    session.close()
-  }
-
-  private def saveToCassandra(df: DataFrame, bucket: String, bdate: Column) = {
+  private def saveToCassandra(df: DataFrame, bucket: String, events: Broadcast[Seq[String]]) = {
     println(s"Saving data with bucket [$bucket]")
 
-    df.withColumn("bucket", lit(bucket)).withColumn("bdate", bdate).
-      select("event", "bucket", "bdate", "count").
-      write.mode(SaveMode.Append).format("org.apache.spark.sql.cassandra")
-      .options(Map("table" -> "batch_events", "keyspace" -> "lambda_poc"))
-      .save()
+    val cassandraConnector = CassandraConnector(df.sqlContext.sparkContext.getConf)
+
+    import df.sqlContext.implicits._
+
+    events.value.foreach(et => {
+      println(s"\tSaving event $et")
+      val dfe = df.where($"event" eqNullSafe et)
+
+      dfe.foreachPartition(partition => {
+        cassandraConnector.withSessionDo { session =>
+          val prepared = session.prepare("UPDATE lambda_poc.batch_events SET count = ? WHERE event = ? AND bucket = ? AND bdate = ? IF count != ?;")
+
+          partition.grouped(500).foreach(group => {
+            val batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+
+            group.foreach(row => {
+              val count = row.getAs[java.lang.Long]("count")
+              val date = row.getAs[Date]("bdate")
+
+              batchStatement.add(prepared.bind(count, et, bucket, date, count))
+            })
+
+            session.execute(batchStatement)
+          })
+        }
+      })
+    })
   }
+
 }
 
 // NOTES

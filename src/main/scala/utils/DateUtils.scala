@@ -1,7 +1,7 @@
-package batch_layer
+package utils
 
 import org.apache.spark.sql.functions._
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 
 object DateUtils {
 
