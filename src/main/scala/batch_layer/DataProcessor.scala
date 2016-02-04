@@ -100,15 +100,4 @@ object DataProcessor {
       })
     })
   }
-
 }
-
-// NOTES
-//Use partitioning to control the parallelism for writing to your data storage. Your data storage may not support too many concurrent connections.
-
-//Use batch statement!
-
-//Consider a static pool of db connection on each spark worker
-
-//If you are writing to a sharded data storage, partition your RDD to match your sharding strategy.
-//  That way each of your Spark workers only connects to one database shard, rather than each Spark worker connecting to every database shard.
