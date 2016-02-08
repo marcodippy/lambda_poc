@@ -1,8 +1,6 @@
 package test
 
 import com.datastax.driver.core.Cluster
-import org.apache.spark.SparkContext
-import org.apache.spark.sql.cassandra.CassandraSQLContext
 
 object PrepareDatabase extends App {
 

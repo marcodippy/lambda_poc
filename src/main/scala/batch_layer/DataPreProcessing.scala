@@ -8,14 +8,15 @@ import utils.DataFrameUtils._
 
 object DataPreProcessing {
   def main(args: Array[String]): Unit = {
-    Logger.getRootLogger.setLevel(Level.WARN)
     val startTime = new DateTime()
 
     val sc = new SparkContext(new SparkConf().setAppName("DataPreProcessing").setMaster("local[*]"))
+    Logger.getRootLogger.setLevel(Level.WARN)
+
     val sqlContext = new SQLContext(sc)
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-    preProcessData(sqlContext, "hdfs://localhost:9000", "/new_data/kafka/events_topic", "hdfs://localhost:9000/tmp/output")
+    preProcessData(sqlContext, "hdfs://localhost:9000", "/new_data/kafka/events_topic", "hdfs://localhost:9000/events_parquet")
 
     sc.stop()
 
@@ -57,7 +58,7 @@ object DataPreProcessing {
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
     //partitionBy is forcing me to add additional columns to the dataset (all the partition keys). Find out if
     //there is an easy way to avoid that
-    df.write.mode(SaveMode.Append).partitionBy(partitionBy: _*).avro(outputDir)
+    df.write.mode(SaveMode.Append).partitionBy(partitionBy: _*).parquet(outputDir)
   }
 
 }

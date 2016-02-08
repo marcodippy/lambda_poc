@@ -17,7 +17,7 @@ import utils.DataFrameUtils._
 object DataProcessor {
 
   def main(args: Array[String]) {
-    Logger.getRootLogger.setLevel(Level.WARN)
+
     val startTime = new DateTime()
 
     val conf = new SparkConf().setAppName("BatchEventCounter").setMaster("local[*]")
@@ -25,12 +25,15 @@ object DataProcessor {
       .set("spark.sql.shuffle.partitions", "1")
 
     val sc = new SparkContext(conf)
+
+    Logger.getRootLogger.setLevel(Level.WARN)
+
     val sqlContext = new SQLContext(sc)
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
+//    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
 
-    processData(sqlContext, "hdfs://localhost:9000/events")
+    processData(sqlContext, "hdfs://localhost:9000/events_parquet")
 
     sc.stop()
     val endTime = new DateTime()
@@ -41,10 +44,14 @@ object DataProcessor {
   def processData(sqlContext: SQLContext, inputDir: String) = {
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-    //maybe it's a good idea to reduce the number of partitions (coalesce(numPartitions)). Investigate this
-    val df = sqlContext.read.avro(inputDir).coalesce(4).cache()
+    //TODO tune the number of partitions here
+    //initially the number of partitions should be the same as the HDFS blocks (it depends also on how many file you're retrieving)
+    //consider also to repartition data by event before the aggregation
+    //anyway, probably the bottelneck is only on the cassandra write side
+    val df = sqlContext.read.parquet(inputDir).coalesce(4).cache()
 
     println("Retrieving distinct event types...")
+    //TODO if you keep an anagraphic of the events types you can load it once in the main driver and broadcast it to each worker
     val EVENT_TYPES = sqlContext.sparkContext.broadcast[Seq[String]](df.select("event").distinct().collect().map(row => row.getAs[String]("event")))
 
     println("Aggregating by minute...")
@@ -62,28 +69,34 @@ object DataProcessor {
     println("Aggregating by year...")
     val eventsPerYear = eventsPerMonth.groupBy("event", "year").agg(sum("count") as "count")
 
-    saveToCassandra(eventsPerMinute.withBDateColumn("m"), "m", EVENT_TYPES)
-    saveToCassandra(eventsPerHour.withBDateColumn("H"), "H", EVENT_TYPES)
-    saveToCassandra(eventsPerDay.withBDateColumn("D"), "D", EVENT_TYPES)
-    saveToCassandra(eventsPerMonth.withBDateColumn("M"), "M", EVENT_TYPES)
-    saveToCassandra(eventsPerYear.withBDateColumn("Y"), "Y", EVENT_TYPES)
+    val cassandraConnector = CassandraConnector(df.sqlContext.sparkContext.getConf)
+
+    saveToCassandra(eventsPerMinute.withBDateColumn("m"), "m", EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerHour.withBDateColumn("H"), "H", EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerDay.withBDateColumn("D"), "D", EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerMonth.withBDateColumn("M"), "M", EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerYear.withBDateColumn("Y"), "Y", EVENT_TYPES, cassandraConnector)
   }
 
-  private def saveToCassandra(df: DataFrame, bucket: String, events: Broadcast[Seq[String]]) = {
+  //TODO try other approaches to improve performances:
+  // 1) repartition by event
+  // 2) sortWithinPartition; you can iterate only once over the rows! You could use a foldLeft...
+  private def saveToCassandra(df: DataFrame, bucket: String, events: Broadcast[Seq[String]], cassandraConnector: CassandraConnector) = {
     println(s"Saving data with bucket [$bucket]")
-
-    val cassandraConnector = CassandraConnector(df.sqlContext.sparkContext.getConf)
 
     import df.sqlContext.implicits._
 
     events.value.foreach(et => {
       println(s"\tSaving event $et")
-      val dfe = df.where($"event" eqNullSafe et)
+      //TODO probably you can optimize it, instead of querying for each event, you can iterate only once...
+      //or you can sortWithinPartition and then scan sequencially the rows
+      val dfe = df.where($"event" <=> et)
 
       dfe.foreachPartition(partition => {
         cassandraConnector.withSessionDo { session =>
           val prepared = session.prepare("UPDATE lambda_poc.batch_events SET count = ? WHERE event = ? AND bucket = ? AND bdate = ? IF count != ?;")
 
+          //TODO tune the number of statements in a batch
           partition.grouped(500).foreach(group => {
             val batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
 

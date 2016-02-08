@@ -68,6 +68,8 @@ object StreamingEventCounter {
     KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, Set("events_topic"))
   }
 
+
+  //TODO try to use the low level API for batching inserts and use session.executeAsynch
   def saveToCassandra(df: DataFrame, bucket: String) = {
     println(s"Saving data with bucket [$bucket] : DF size => ${df.count()}")
 
