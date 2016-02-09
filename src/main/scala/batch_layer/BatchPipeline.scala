@@ -46,6 +46,7 @@ object BatchPipeline {
 
   def getSparkConf(): SparkConf =
     new SparkConf().setAppName("BatchePipeline").setMaster("local[*]")
+      .set("spark.eventLog.enabled", "true")
       .set("spark.cassandra.connection.host", CASSANDRA_HOST)
       .set("spark.sql.shuffle.partitions", "1") //tune this value
   //    .set("spark.cassandra.output.batch.size.rows", "1") //tune this value

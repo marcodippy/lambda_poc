@@ -2,10 +2,9 @@ package batch_layer
 
 import java.util.Date
 
-import _root_.test.PrepareDatabase
-import com.databricks.spark.avro._
 import com.datastax.driver.core.BatchStatement
 import com.datastax.spark.connector.cql.CassandraConnector
+import model.BucketModel.BucketTypes
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql._
@@ -21,6 +20,7 @@ object DataProcessor {
     val startTime = new DateTime()
 
     val conf = new SparkConf().setAppName("BatchEventCounter").setMaster("local[*]")
+//      .set("spark.eventLog.enabled", "true")
       .set("spark.cassandra.connection.host", "127.0.0.1")
       .set("spark.sql.shuffle.partitions", "1")
 
@@ -31,7 +31,7 @@ object DataProcessor {
     val sqlContext = new SQLContext(sc)
     sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
 
-//    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
+    //    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
 
     processData(sqlContext, "hdfs://localhost:9000/events_parquet")
 
@@ -71,17 +71,17 @@ object DataProcessor {
 
     val cassandraConnector = CassandraConnector(df.sqlContext.sparkContext.getConf)
 
-    saveToCassandra(eventsPerMinute.withBDateColumn("m"), "m", EVENT_TYPES, cassandraConnector)
-    saveToCassandra(eventsPerHour.withBDateColumn("H"), "H", EVENT_TYPES, cassandraConnector)
-    saveToCassandra(eventsPerDay.withBDateColumn("D"), "D", EVENT_TYPES, cassandraConnector)
-    saveToCassandra(eventsPerMonth.withBDateColumn("M"), "M", EVENT_TYPES, cassandraConnector)
-    saveToCassandra(eventsPerYear.withBDateColumn("Y"), "Y", EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerMinute.withBDateColumn(BucketTypes.minute), BucketTypes.minute, EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerHour.withBDateColumn(BucketTypes.hour), BucketTypes.hour, EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerDay.withBDateColumn(BucketTypes.day), BucketTypes.day, EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerMonth.withBDateColumn(BucketTypes.month), BucketTypes.month, EVENT_TYPES, cassandraConnector)
+    saveToCassandra(eventsPerYear.withBDateColumn(BucketTypes.year), BucketTypes.year, EVENT_TYPES, cassandraConnector)
   }
 
   //TODO try other approaches to improve performances:
   // 1) repartition by event
   // 2) sortWithinPartition; you can iterate only once over the rows! You could use a foldLeft...
-  private def saveToCassandra(df: DataFrame, bucket: String, events: Broadcast[Seq[String]], cassandraConnector: CassandraConnector) = {
+  private def saveToCassandra(df: DataFrame, bucket: BucketTypes.Value, events: Broadcast[Seq[String]], cassandraConnector: CassandraConnector) = {
     println(s"Saving data with bucket [$bucket]")
 
     import df.sqlContext.implicits._
@@ -104,7 +104,7 @@ object DataProcessor {
               val count = row.getAs[java.lang.Long]("count")
               val date = row.getAs[Date]("bdate")
 
-              batchStatement.add(prepared.bind(count, et, bucket, date, count))
+              batchStatement.add(prepared.bind(count, et, bucket.toString, date, count))
             })
 
             session.execute(batchStatement)

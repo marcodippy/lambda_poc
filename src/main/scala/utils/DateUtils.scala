@@ -1,6 +1,5 @@
 package utils
 
-import org.apache.spark.sql.functions._
 import org.joda.time.{DateTime, DateTimeZone}
 
 object DateUtils {
@@ -8,24 +7,17 @@ object DateUtils {
   def toSqlTimestamp(year: Int, month: Int, day: Int, hour: Int, minute: Int): java.sql.Timestamp =
     new java.sql.Timestamp(new DateTime(year, month, day, hour, minute, 0, DateTimeZone.getDefault).getMillis)
 
-  val bdate_min = udf(
-    (year: Int, month: Int, day: Int, hour: Int, minute: Int) => toSqlTimestamp(year, month, day, hour, minute)
-  )
+  case class Range(left: DateTime, right: DateTime) {
+    require(right.isAfter(left) || (left equals right))
 
-  val bdate_h = udf(
-    (year: Int, month: Int, day: Int, hour: Int) => toSqlTimestamp(year, month, day, hour, 0)
-  )
+    def lengthInMillis = this.right.getMillis - this.left.getMillis
 
-  val bdate_d = udf(
-    (year: Int, month: Int, day: Int) => toSqlTimestamp(year, month, day, 0, 0)
-  )
+    def startsWith(otherRange: Range): Boolean = this.left equals otherRange.left
 
-  val bdate_m = udf(
-    (year: Int, month: Int) => toSqlTimestamp(year, month, 1, 0, 0)
-  )
+    def endsWith(otherRange: Range): Boolean = this.right equals otherRange.right
 
-  val bdate_y = udf(
-    (year: Int) => toSqlTimestamp(year, 1, 1, 0, 0)
-  )
+    def isWider(otherRange: Range): Boolean = this.lengthInMillis > otherRange.lengthInMillis
 
+    def isEmpty: Boolean = this.left equals this.right
+  }
 }

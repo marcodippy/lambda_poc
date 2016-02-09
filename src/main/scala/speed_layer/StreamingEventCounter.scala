@@ -1,6 +1,7 @@
 package speed_layer
 
 import kafka.serializer.StringDecoder
+import model.BucketModel.{Bucket, BucketTypes}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
@@ -17,16 +18,17 @@ object StreamingEventCounter {
   val KAFKA_BROKER_LIST = "localhost:9092"
 
   def main(args: Array[String]) {
-    Logger.getRootLogger.setLevel(Level.WARN)
-
     test.PrepareDatabase.prepareRealTimeDatabase(CASSANDRA_HOST)
 
     val conf = new SparkConf().setAppName("StreamingEventCounter").setMaster("local[*]")
+//      .set("spark.eventLog.enabled", "true")
       .set("spark.sql.shuffle.partitions", "1")
       .set("spark.cassandra.connection.host", CASSANDRA_HOST)
 
     val ssc = new StreamingContext(conf, Seconds(1))
     val sqlContext = new SQLContext(ssc.sparkContext)
+
+    Logger.getRootLogger.setLevel(Level.WARN)
 
     val stream = getStream(ssc)
 
@@ -39,23 +41,19 @@ object StreamingEventCounter {
   }
 
   def processMessagesRdd(rdd: RDD[String], sqlContext: SQLContext) = {
-    val df = sqlContext.read.json(rdd).withColumn("count", lit(1))
+    val df = sqlContext.read.json(rdd)
 
     println("Aggregating by minute...")
-    val eventsPerMinute = df.groupBy(
-      col("event"),
-      yearCol("timestamp"), monthCol("timestamp"), dayCol("timestamp"), hourCol("timestamp"), minuteCol("timestamp")
-    ).count().cache()
+    val eventsPerMinute = df.groupBy(col("event"), bucketStartDateCol(BucketTypes.minute, "timestamp") as "bdate").count().cache()
 
-    saveToCassandra(eventsPerMinute.withBucketAndBDateColumns("m"), "m")
+    println(s"Saving data with bucket [m] : DF size => ${eventsPerMinute.count()}")
+    saveToCassandra(eventsPerMinute.withBucketColumn(BucketTypes.minute))
 
     println("Aggregating by hour...")
-    val eventsPerHour = eventsPerMinute.groupBy(
-      col("event"),
-      col("year"), col("month"), col("day"), col("hour")
-    ).agg(sum("count") as "count")
+    val eventsPerHour = eventsPerMinute.groupBy(col("event"), bucketStartDateCol(BucketTypes.hour, "bdate") as "bdate").agg(sum("count") as "count")
 
-    saveToCassandra(eventsPerHour.withBucketAndBDateColumns("H"), "H")
+    println(s"Saving data with bucket [H] : DF size => ${eventsPerHour.count()}")
+    saveToCassandra(eventsPerHour.withBucketColumn(BucketTypes.hour))
 
     eventsPerMinute.unpersist()
   }
@@ -68,12 +66,9 @@ object StreamingEventCounter {
     KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, Set("events_topic"))
   }
 
-
-  //TODO try to use the low level API for batching inserts and use session.executeAsynch
-  def saveToCassandra(df: DataFrame, bucket: String) = {
-    println(s"Saving data with bucket [$bucket] : DF size => ${df.count()}")
-
-    df.select("event", "bucket", "bdate", "count").
+  //TODO try to use the low level API for batching inserts and try session.executeAsynch
+  def saveToCassandra(df: DataFrame) = {
+    df.
       write.mode(SaveMode.Append).format("org.apache.spark.sql.cassandra")
       .options(Map("table" -> "events", "keyspace" -> "lambda_poc"))
       .save()

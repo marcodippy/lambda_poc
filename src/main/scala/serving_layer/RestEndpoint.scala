@@ -1,13 +1,13 @@
 package serving_layer
 
 import akka.actor.ActorSystem
-import com.datastax.driver.core.Cluster
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.DateTime
 import spray.http.HttpHeaders.RawHeader
 import spray.httpx.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 import spray.routing.SimpleRoutingApp
+import utils.DateUtils._
 
 object MJsonImplicits extends DefaultJsonProtocol {
   implicit val impEvent = jsonFormat3(WEvent)
@@ -38,7 +38,7 @@ object RestEndpoint extends App with SimpleRoutingApp with SprayJsonSupport {
             parameters('from, 'to, 'event, 'bucket) { (from, to, event, bucket) =>
               complete {
                 val results = EventCount.getEventCountByRangeAndBucket(event, new Range(new DateTime(from), new DateTime(to)), bucket)
-                results.map(e => WEvent(bucket, e.bucket.date.toString("yyyy-MM-dd HH:mm"), e.count))
+                results.map(e => WEvent(bucket, e.bucket.start.toString("yyyy-MM-dd HH:mm"), e.count))
               }
             }
           }
@@ -56,7 +56,7 @@ object RestEndpoint extends App with SimpleRoutingApp with SprayJsonSupport {
                   results = EventCount.getEventsByRange(event, new Range(new DateTime(from), new DateTime(to)))
                 }
 
-                results.map(e => WEvent(e.bucket.b_type, e.bucket.date.toString("yyyy-MM-dd HH:mm"), e.count))
+                results.map(e => WEvent(e.bucket.`type`.toString, e.bucket.start.toString("yyyy-MM-dd HH:mm"), e.count))
               }
             }
           }

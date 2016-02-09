@@ -65,6 +65,8 @@ assemblyMergeStrategy in assembly := {
             case _ => MergeStrategy.discard
     }
   }
+  case PathList("reference.conf", xs@_*) => MergeStrategy.concat
+  case PathList(ps @ _*) if ps.contains("spray") => MergeStrategy.discard
   case _ => MergeStrategy.first
 }
 

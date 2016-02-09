@@ -10,7 +10,7 @@ object DataPreProcessing {
   def main(args: Array[String]): Unit = {
     val startTime = new DateTime()
 
-    val sc = new SparkContext(new SparkConf().setAppName("DataPreProcessing").setMaster("local[*]"))
+    val sc = new SparkContext(new SparkConf().setAppName("DataPreProcessing").setMaster("local[*]").set("spark.eventLog.enabled", "true"))
     Logger.getRootLogger.setLevel(Level.WARN)
 
     val sqlContext = new SQLContext(sc)

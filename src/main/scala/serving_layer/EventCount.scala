@@ -3,10 +3,12 @@ package serving_layer
 import java.sql.Timestamp
 
 import com.datastax.driver.core.Cluster
+import model.BucketModel.BucketTypes
 import org.joda.time.DateTime
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
+import utils.DateUtils._
 
 //TODO refactoring!
 object EventCount {
@@ -62,7 +64,7 @@ object EventCount {
           go(event, rangeLeft, rangeRight, blist.tail, results)
         }
         else {
-          var l = events.head.bucket.date
+          var l = events.head.bucket.start
           var r = events.last.bucket.end
 
           if (rangeRight.left equals rangeRight.right) {
@@ -81,17 +83,17 @@ object EventCount {
     go(event, range, range, bl, List.empty[EventRow])
   }
 
-  private def sortByBucketDate(e1: EventRow, e2: EventRow): Boolean = e1.bucket.date.isBefore(e2.bucket.date)
+  private def sortByBucketDate(e1: EventRow, e2: EventRow): Boolean = e1.bucket.start.isBefore(e2.bucket.start)
 
   def countEventsByRange(event: String, range: Range): Long = {
-    val realTimeEvents = getEvents(event, range, Bucket.bucketList, "realtime").sortWith(sortByBucketDate)
+    val realTimeEvents = getEvents(event, range, BucketTypes.asList, "realtime").sortWith(sortByBucketDate)
 
     val nrange = realTimeEvents match {
-      case x :: _ => Range(range.left, x.bucket.date)
+      case x :: _ => Range(range.left, x.bucket.start)
       case _ => range
     }
 
-    val batchEvents = getEvents(event, nrange, Bucket.bucketList, "batch").sortWith(sortByBucketDate)
+    val batchEvents = getEvents(event, nrange, BucketTypes.asList, "batch").sortWith(sortByBucketDate)
 
     batchEvents union realTimeEvents map (_.count) sum
   }
@@ -100,7 +102,7 @@ object EventCount {
     val realTimeEvents = getEvents(event, range, List(bucket), "realtime").sortWith(sortByBucketDate)
 
     val nrange = realTimeEvents match {
-      case x :: _ => Range(range.left, x.bucket.date)
+      case x :: _ => Range(range.left, x.bucket.start)
       case _ => range
     }
 
@@ -109,14 +111,14 @@ object EventCount {
   }
 
   def getEventsByRange(event: String, range: Range) : Seq[EventRow] = {
-    val realTimeEvents = getEvents(event, range, Bucket.bucketList, "realtime").sortWith(sortByBucketDate)
+    val realTimeEvents = getEvents(event, range, BucketTypes.asList, "realtime").sortWith(sortByBucketDate)
 
     val nrange = realTimeEvents match {
-      case x :: _ => Range(range.left, x.bucket.date)
+      case x :: _ => Range(range.left, x.bucket.start)
       case _ => range
     }
 
-    val batchEvents = getEvents(event, nrange, Bucket.bucketList, "batch").sortWith(sortByBucketDate)
+    val batchEvents = getEvents(event, nrange, BucketTypes.asList, "batch").sortWith(sortByBucketDate)
     batchEvents union realTimeEvents
   }
 
