@@ -13,6 +13,8 @@ object BucketModel {
     val month = Value(4, "M")
     val year = Value(5, "Y")
 
+
+    //TODO questo fallo che restituisce BucketTypes.Values
     def asList: List[String] = {
       this.values.map(_.toString).toList
     }
