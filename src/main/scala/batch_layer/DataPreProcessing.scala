@@ -1,27 +1,20 @@
 package batch_layer
 
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
-import org.apache.spark.{SparkConf, SparkContext}
-import org.joda.time.DateTime
+
+import utils.Utils.measureTime
 import utils.DataFrameUtils._
+import utils.Environment
 
 object DataPreProcessing {
   def main(args: Array[String]): Unit = {
-    val startTime = new DateTime()
+    val sqlContext = Environment.SPARK.newSqlContext("DataPreProcessing")
 
-    val sc = new SparkContext(new SparkConf().setAppName("DataPreProcessing").setMaster("local[*]").set("spark.eventLog.enabled", "true"))
-    Logger.getRootLogger.setLevel(Level.WARN)
+    measureTime {
+      preProcessData(sqlContext, Environment.HDFS.HOST, Environment.HDFS.FLUME_DATA_DIR, Environment.HDFS.EVENTS_MASTERDATASET_DIR)
+    }
 
-    val sqlContext = new SQLContext(sc)
-    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
-
-    preProcessData(sqlContext, "hdfs://localhost:9000", "/new_data/kafka/events_topic", "hdfs://localhost:9000/events_parquet")
-
-    sc.stop()
-
-    val endTime = new DateTime()
-    println(s"Partitioning completed in ${endTime.getMillis - startTime.getMillis}ms")
+    sqlContext.sparkContext.stop()
   }
 
   def preProcessData(sqlContext: SQLContext, hdfsUrl: String, inputPath: String, outputPath: String, deleteInputFiles: Boolean = false) = {
@@ -44,21 +37,17 @@ object DataPreProcessing {
     }
   }
 
-  private def getDataFrame(sqlContext: SQLContext, sourceFilePath: String): DataFrame = {
+  private def getDataFrame(sqlContext: SQLContext, sourceFilePath: String): DataFrame =
     sqlContext.read.json(sourceFilePath)
       .withColumn("year", yearCol("timestamp"))
       .withColumn("month", monthCol("timestamp"))
       .withColumn("day", dayCol("timestamp"))
       .withColumn("hour", hourCol("timestamp"))
       .withColumn("minute", minuteCol("timestamp"))
-  }
 
-  private def writeDataFrame(sqlContext: SQLContext, df: DataFrame, outputDir: String, partitionBy: Seq[String]) = {
-    import com.databricks.spark.avro._
-    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
-    //partitionBy is forcing me to add additional columns to the dataset (all the partition keys). Find out if
-    //there is an easy way to avoid that
+  //partitionBy is forcing me to add additional columns to the dataset (all the partition keys).
+  //Find out if there is an easy way to avoid that
+  private def writeDataFrame(sqlContext: SQLContext, df: DataFrame, outputDir: String, partitionBy: Seq[String]) =
     df.write.mode(SaveMode.Append).partitionBy(partitionBy: _*).parquet(outputDir)
-  }
 
 }

@@ -5,45 +5,29 @@ import java.util.Date
 import com.datastax.driver.core.BatchStatement
 import com.datastax.spark.connector.cql.CassandraConnector
 import model.BucketModel.BucketTypes
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
-import org.apache.spark.{SparkConf, SparkContext}
-import org.joda.time.DateTime
 import utils.DataFrameUtils._
+import utils.Environment
+import utils.Utils.measureTime
 
 object DataProcessor {
 
   def main(args: Array[String]) {
+    val sqlContext = Environment.SPARK.newSqlContext("DataProcessor")
 
-    val startTime = new DateTime()
+    //PrepareDatabase.prepareBatchDatabase("127.0.0.1")
 
-    val conf = new SparkConf().setAppName("BatchEventCounter").setMaster("local[*]")
-//      .set("spark.eventLog.enabled", "true")
-      .set("spark.cassandra.connection.host", "127.0.0.1")
-      .set("spark.sql.shuffle.partitions", "1")
+    measureTime {
+      processData(sqlContext, Environment.HDFS.EVENTS_MASTERDATASET_DIR)
+    }
 
-    val sc = new SparkContext(conf)
-
-    Logger.getRootLogger.setLevel(Level.WARN)
-
-    val sqlContext = new SQLContext(sc)
-    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
-
-    //    PrepareDatabase.prepareBatchDatabase("127.0.0.1")
-
-    processData(sqlContext, "hdfs://localhost:9000/events_parquet")
-
-    sc.stop()
-    val endTime = new DateTime()
-    println(s"Processing completed in ${endTime.getMillis - startTime.getMillis} ms")
+    sqlContext.sparkContext.stop()
     System.exit(0)
   }
 
   def processData(sqlContext: SQLContext, inputDir: String) = {
-    sqlContext.setConf("spark.sql.avro.compression.codec", "snappy")
-
     //TODO tune the number of partitions here
     //initially the number of partitions should be the same as the HDFS blocks (it depends also on how many file you're retrieving)
     //consider also to repartition data by event before the aggregation

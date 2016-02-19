@@ -1,6 +1,7 @@
 package test
 
 import com.datastax.driver.core.Cluster
+import utils.Environment
 
 object PrepareDatabase extends App {
 
@@ -21,6 +22,6 @@ object PrepareDatabase extends App {
     session.close()
   }
 
-  prepareRealTimeDatabase("127.0.0.1")
-  prepareBatchDatabase("127.0.0.1")
+  prepareRealTimeDatabase(Environment.CASSANDRA.HOST)
+  prepareBatchDatabase(Environment.CASSANDRA.HOST)
 }

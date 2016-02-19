@@ -49,7 +49,7 @@ object RestEndpoint extends App with SimpleRoutingApp with SprayJsonSupport {
               complete {
                 var results = Seq.empty[EventRow]
 
-                if (StringUtils.isEmpty(event)){
+                if (StringUtils.isEmpty(event)) {
                   results = EventCount.getTotalEventsCount(new Range(new DateTime(from), new DateTime(to)))
                 }
                 else {

@@ -4,12 +4,11 @@ import java.util.Properties
 
 import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
 import org.joda.time.{Duration, Period, DateTime}
+import utils.Environment
 
 import scala.util.Random
 
 object DataProducer {
-  val KAFKA_BROKER_LIST = "localhost:9092"
-
   val EVENT_TYPES = Seq(
     "LOGIN_WEB", "LOGIN_MOBILE", "BANK_TRANSFER",
     "PAY_BILL", "REQUEST_CREDIT_CARD", "VIEW_STATEMENT",
@@ -18,7 +17,22 @@ object DataProducer {
   )
 
   val TIME_STEPS = Seq(
+    new Period(0, 0, 0, 3),
+    new Period(0, 0, 0, 5),
+    new Period(0, 0, 0, 7),
+    new Period(0, 0, 0, 9),
     new Period(0, 0, 1, 0),
+    new Period(0, 0, 1, 2),
+    new Period(0, 0, 1, 3),
+    new Period(0, 0, 1, 4),
+    new Period(0, 0, 1, 5),
+    new Period(0, 0, 1, 6),
+    new Period(0, 0, 1, 7),
+    new Period(0, 0, 1, 8),
+    new Period(0, 0, 1, 9),
+    new Period(0, 0, 2, 0),
+    new Period(0, 0, 3, 0),
+    new Period(0, 0, 4, 0),
     new Period(0, 0, 5, 0),
     new Period(0, 0, 10, 0),
     new Period(0, 0, 15, 0),
@@ -38,7 +52,7 @@ object DataProducer {
   def main(args: Array[String]) {
     val startTime = new DateTime()
 
-    val producer = getProducer(KAFKA_BROKER_LIST)
+    val producer = getProducer(Environment.KAFKA.BROKER_LIST)
     val messages = createData(TEST_DATA)
 
     var msgCount = 0;
@@ -67,8 +81,7 @@ object DataProducer {
     val props = new Properties()
     props.put("metadata.broker.list", kafkaBrokerList)
     props.put("serializer.class", "kafka.serializer.StringEncoder")
-    props.put("producer.type", "async")
-    //props.put("request.required.acks", "1")
+//    props.put("producer.type", "async")
 
     new Producer[String, String](new ProducerConfig(props))
   }
