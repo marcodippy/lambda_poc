@@ -93,4 +93,4 @@ You can also launch the `batch_layer.DataPreProcessing` and `batch_layer.DataPre
 If you want to produce some test messages you can use the class `test.DataProducer`
 
 You can launch the `serving_layer.RestEndpoint` class to launch a webservice that allows you to perform some queries.
-Under the `test.frontend` folder you can find some simple html pages that calls the RestEndpoint and show the results.
+Under the `test.frontend` folder you can find some simple html pages that call the RestEndpoint and show the results.
