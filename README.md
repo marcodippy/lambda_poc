@@ -6,7 +6,7 @@ Poc for a lambda architecture using Kafka, Flume, Spark, Cassandra, HDFS
 * Scala 2.11
 * Sbt 0.13
 * Hadoop/HDFS 2.7.1
-* Spark 1.5.2
+* Spark 1.6.0 (locally built to make it compatible with scala 2.11)
 * Cassandra 3.2.1
 * Kafka 0.9.0.0
 * Flume 1.6.0
